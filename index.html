@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChestAI — Chẩn đoán X-quang Lồng ngực</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:    #030712; --bg2: #0f172a; --bg3: #111827;
+      --bd:    rgba(255,255,255,0.07);
+      --text:  #f1f5f9; --muted: #64748b; --dim: #334155;
+      --indig: #818cf8; --green: #22c55e;
+      --amber: #fbbf24; --red:   #f87171;
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 99;
+      background: rgba(3,7,18,0.92); backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--bd);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 40px; height: 56px;
+    }
+    .logo { font-size: 15px; font-weight: 700; color: var(--text); text-decoration: none; }
+    .logo span { color: var(--indig); }
+    .nav-tabs { display: flex; height: 100%; }
+    .nav-tab {
+      display: flex; align-items: center; padding: 0 20px;
+      font-size: 13px; font-weight: 500; color: var(--muted);
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s; white-space: nowrap;
+      text-decoration: none;
+    }
+    .nav-tab:hover { color: var(--text); }
+    .nav-tab.active { color: var(--indig); border-bottom-color: var(--indig); }
+    .nav-cta {
+      background: #4f46e5; color: #fff; padding: 7px 18px;
+      border-radius: 8px; font-size: 13px; font-weight: 600;
+      text-decoration: none; transition: background .2s; white-space: nowrap;
+    }
+    .nav-cta:hover { background: #6366f1; }
+
+    /* ── TABS CONTENT ── */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── SHARED ── */
+    .section { max-width: 1000px; margin: 0 auto; padding: 64px 24px; }
+    .sec-label {
+      font-size: 11px; font-weight: 700; color: var(--indig);
+      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 10px;
+    }
+    .sec-title { font-size: clamp(22px,3vw,30px); font-weight: 800; margin-bottom: 8px; }
+    .sec-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+    .divider { border: none; border-top: 1px solid var(--bd); max-width: 1000px; margin: 0 auto; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 88vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 60px 24px; max-width: 1000px; margin: 0 auto;
+    }
+    .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 24px; }
+    .tag {
+      padding: 3px 12px; border-radius: 99px; font-size: 11px; font-weight: 600;
+      background: rgba(99,102,241,0.15); color: var(--indig);
+      border: 1px solid rgba(99,102,241,0.25);
+    }
+    .tag.g { background: rgba(34,197,94,0.12); color: var(--green); border-color: rgba(34,197,94,0.2); }
+    .tag.a { background: rgba(251,191,36,0.12); color: var(--amber); border-color: rgba(251,191,36,0.2); }
+    .tag.r { background: rgba(239,68,68,0.12); color: var(--red); border-color: rgba(239,68,68,0.2); }
+    .hero h1 { font-size: clamp(28px,5vw,50px); font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+    .hero h1 em { color: var(--indig); font-style: normal; }
+    .hero p { font-size: 15px; color: var(--muted); max-width: 560px; margin: 0 auto 32px; line-height: 1.7; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: #4f46e5; color: #fff; padding: 13px 30px;
+      border-radius: 10px; font-size: 15px; font-weight: 700;
+      text-decoration: none; transition: background .2s, transform .15s;
+    }
+    .btn:hover { background: #6366f1; transform: translateY(-1px); }
+    .warn { font-size: 12px; color: var(--dim); margin-top: 14px; }
+    .stats {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 14px; width: 100%; max-width: 860px; margin-top: 56px;
+    }
+    .stat {
+      background: var(--bg2); border: 1px solid var(--bd);
+      border-radius: 12px; padding: 18px; text-align: center;
+      transition: border-color .2s;
+    }
+    .stat:hover { border-color: rgba(99,102,241,0.3); }
+    .stat-v { font-size: 28px; font-weight: 800; color: var(--indig); }
+    .stat-l { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* ── INTRO CARDS ── */
+    .card-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 48px; }
+    .card {
+      background: var(--bg2); border: 1px solid var(--bd);
+      border-radius: 12px; padding: 20px;
+      transition: border-color .2s, transform .2s;
+    }
+    .card:hover { border-color: rgba(99,102,241,0.3); transform: translateY(-2px); }
+    .card-icon { font-size: 24px; margin-bottom: 12px; }
+    .card h3 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── INFO TABLE ── */
+    .info-table { background: var(--bg2); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+    .info-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .info-table th {
+      padding: 10px 16px; text-align: left; font-size: 10px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
+      background: var(--bg3); border-bottom: 1px solid var(--bd);
+    }
+    .info-table td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .info-table tr:last-child td { border-bottom: none; }
+    .info-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .hl { font-weight: 700; color: var(--text); }
+
+    /* ── PIPELINE ── */
+    .pipeline { display: grid; grid-template-columns: repeat(4,1fr); gap: 0; position: relative; margin-bottom: 48px; }
+    .pipeline::before {
+      content: ''; position: absolute; top: 27px; left: 12%; right: 12%; height: 2px;
+      background: linear-gradient(90deg,#4f46e5,#818cf8);
+    }
+    .pipe { text-align: center; padding: 0 12px; position: relative; }
+    .pipe-n {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: linear-gradient(135deg,#4f46e5,#7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: #fff;
+      margin: 0 auto 12px; position: relative; z-index: 1;
+      box-shadow: 0 0 18px rgba(99,102,241,0.4);
+    }
+    .pipe h4 { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+    .pipe p { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    /* ── RESULTS TABLE ── */
+    .table-wrap { background: var(--bg2); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: var(--bg3); }
+    th {
+      padding: 11px 14px; text-align: left; font-size: 10px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
+      border-bottom: 1px solid var(--bd);
+    }
+    td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .my { font-weight: 700; color: var(--indig); }
+    .up { color: var(--green); font-size: 12px; font-weight: 600; }
+    .dn { color: var(--muted); font-size: 12px; }
+    .mean td { background: var(--bg3); font-weight: 700; }
+
+    .summary { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .sc {
+      flex: 1; min-width: 160px; background: var(--bg2);
+      border: 1px solid var(--bd); border-radius: 10px; padding: 14px 18px;
+    }
+    .sc .sl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+    .sc .sv { font-size: 20px; font-weight: 800; }
+
+    /* mode table */
+    .mode-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 32px; }
+    .mode-card {
+      background: var(--bg2); border: 1px solid var(--bd);
+      border-radius: 12px; padding: 18px;
+    }
+    .mode-card .mname { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--indig); }
+    .mode-card .mrow { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .mode-card .mrow:last-child { border-bottom: none; }
+    .mode-card .mval { font-weight: 600; color: var(--text); }
+
+    /* per-disease table */
+    .det-table { background: var(--bg2); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; margin-top: 32px; }
+
+    /* ── CONTACT ── */
+    .contact-wrap {
+      max-width: 640px; margin: 0 auto; text-align: center; padding: 80px 24px;
+    }
+    .contact-wrap h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    .contact-wrap p { font-size: 14px; color: var(--muted); margin-bottom: 32px; line-height: 1.7; }
+    .contact-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+    .cc {
+      background: var(--bg2); border: 1px solid var(--bd);
+      border-radius: 12px; padding: 20px; text-align: left;
+      text-decoration: none; transition: border-color .2s, transform .2s;
+      display: block;
+    }
+    .cc:hover { border-color: rgba(99,102,241,0.4); transform: translateY(-2px); }
+    .cc .ci { font-size: 24px; margin-bottom: 10px; }
+    .cc .ct { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .cc .cd { font-size: 12px; color: var(--muted); }
+
+    /* footer */
+    footer {
+      border-top: 1px solid var(--bd); padding: 24px;
+      text-align: center; font-size: 13px; color: var(--muted);
+    }
+    footer b { color: var(--text); }
+
+    @media (max-width: 640px) {
+      .stats, .card-grid, .pipeline, .mode-grid { grid-template-columns: repeat(2,1fr); }
+      .pipeline::before { display: none; }
+      .contact-cards { grid-template-columns: 1fr; }
+      nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">🫁 <span>ChestAI</span></a>
+  <div class="nav-tabs">
+    <span class="nav-tab active" onclick="switchTab('gioi-thieu', this)">Giới thiệu</span>
+    <span class="nav-tab" onclick="switchTab('ket-qua', this)">Kết quả</span>
+    <a class="nav-tab"
+       href="https://github.com/thuanluuan/HE-THONG-HO-TRO-CHUAN-DOAN-BENH-LY-LONG-NGUC-QUA-ANH-X-QUANG-AI-"
+       target="_blank">Liên hệ</a>
+  </div>
+  <a class="nav-cta"
+     href="https://huggingface.co/spaces/AnThuan2611/chest-xray-diagnosis"
+     target="_blank">🔍 Mở ứng dụng</a>
+</nav>
+
+<!-- ══ GIỚI THIỆU ══ -->
+<div id="tab-gioi-thieu" class="tab-content active">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="badges">
+      <span class="tag">DenseNet121 + SE Block</span>
+      <span class="tag">Transfer Learning</span>
+      <span class="tag g">Mean AUC 0.8267</span>
+      <span class="tag a">NIH Chest X-ray 14</span>
+      <span class="tag r">Chỉ hỗ trợ nghiên cứu</span>
+    </div>
+    <h1>Chẩn đoán <em>Bệnh lý Lồng ngực</em><br/>bằng Trí tuệ Nhân tạo</h1>
+    <p>
+      Hệ thống AI hỗ trợ phân loại đa nhãn 14 bệnh lý lồng ngực từ ảnh X-quang
+      sử dụng Transfer Learning thuần (DenseNet121 + Channel Attention SE Block),
+      huấn luyện trên 112,120 ảnh từ bộ dữ liệu chuẩn quốc tế NIH Chest X-ray 14.
+    </p>
+    <a class="btn"
+       href="https://huggingface.co/spaces/AnThuan2611/chest-xray-diagnosis"
+       target="_blank">🔍 Mở ứng dụng chẩn đoán</a>
+    <p class="warn">⚠ Chỉ hỗ trợ nghiên cứu — không thay thế chẩn đoán y tế chuyên nghiệp</p>
+    <div class="stats">
+      <div class="stat"><div class="stat-v">0.8267</div><div class="stat-l">Mean AUC (Test)</div></div>
+      <div class="stat"><div class="stat-v">14/14</div><div class="stat-l">Vượt Baseline Wang</div></div>
+      <div class="stat"><div class="stat-v">5/14</div><div class="stat-l">Vượt CheXNet Stanford</div></div>
+      <div class="stat"><div class="stat-v">112K</div><div class="stat-l">Ảnh huấn luyện</div></div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- Tóm tắt dự án -->
+  <div class="section">
+    <div class="sec-label">Tóm tắt</div>
+    <div class="sec-title">Điểm nổi bật chính</div>
+    <div class="sec-sub">Kết quả đạt được trên tập Test độc lập, chia theo Patient ID.</div>
+
+    <div class="info-table">
+      <table>
+        <thead><tr><th>Tiêu chí</th><th>Kết quả</th></tr></thead>
+        <tbody>
+          <tr><td>Mean AUC trên tập Test (tốt nhất)</td><td class="hl">0.8267</td></tr>
+          <tr><td>Số bệnh vượt Baseline Wang et al. (2017)</td><td class="hl">14 / 14 ✅</td></tr>
+          <tr><td>Số bệnh vượt CheXNet SOTA (Stanford, 2017)</td><td class="hl">5 / 14 🏆</td></tr>
+          <tr><td>Khoảng cách với CheXNet (Mean AUC)</td><td class="hl">−0.015</td></tr>
+          <tr><td>Bệnh đạt AUC cao nhất</td><td class="hl">Hernia — 0.946</td></tr>
+          <tr><td>Chống Data Leakage</td><td class="hl">Tách theo Patient ID ✅</td></tr>
+          <tr><td>Khả năng giải thích</td><td class="hl">Grad-CAM Visualization ✅</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tính năng -->
+    <div class="sec-label" style="margin-top:48px">Tính năng</div>
+    <div class="sec-title">Kiến trúc & Phương pháp</div>
+    <div class="sec-sub">Transfer Learning thuần — không xây dựng CNN từ đầu.</div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <h3>DenseNet121 Backbone</h3>
+        <p>Pre-trained ImageNet với Dense Connections — tái sử dụng đặc trưng tối đa, gradient flow ổn định, lý tưởng cho ảnh y tế.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👁️</div>
+        <h3>Channel Attention (SE Block)</h3>
+        <p>Squeeze-and-Excitation (ratio=16) học cân trọng số từng kênh đặc trưng — tập trung vùng tổn thương, triệt tiêu nhiễu.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🗺️</div>
+        <h3>Grad-CAM Visualization</h3>
+        <p>Trực quan hóa vùng AI tập trung bằng Gradient-weighted Class Activation Mapping — tăng tính giải thích cho bác sĩ.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚖️</div>
+        <h3>3 Chế độ Ngưỡng</h3>
+        <p><b>Precise</b> · <b>Advanced</b> · <b>Screening</b> — tối ưu ngưỡng riêng từng bệnh trên Validation, kể cả bệnh hiếm.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔥</div>
+        <h3>Asymmetric Focal Loss</h3>
+        <p>γ_neg=2.5, α=0.80, label_smoothing=0.05 — xử lý mất cân bằng nhãn nghiêm trọng giữa 15 class.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🛡️</div>
+        <h3>Chống Data Leakage</h3>
+        <p>Chia Train/Val/Test 80/10/10% theo Patient ID — đảm bảo đánh giá độc lập tuyệt đối, kết quả trung thực.</p>
+      </div>
+    </div>
+
+    <!-- Pipeline -->
+    <div class="sec-label">Quy trình</div>
+    <div class="sec-title">Fine-Tuning 3 Giai đoạn</div>
+    <div class="sec-sub" style="margin-bottom:40px">Từ đơn giản đến phức tạp để bảo toàn trọng số pre-trained.</div>
+
+    <div class="pipeline">
+      <div class="pipe">
+        <div class="pipe-n">1</div>
+        <h4>Feature Extraction</h4>
+        <p>Freeze DenseNet121<br/>Train Head · LR 1e-4<br/>224×224 · 20 epochs</p>
+      </div>
+      <div class="pipe">
+        <div class="pipe-n">2</div>
+        <h4>Fine-tuning</h4>
+        <p>Unfreeze 100 layers<br/>LR 1e-4<br/>224×224 · 20 epochs</p>
+      </div>
+      <div class="pipe">
+        <div class="pipe-n">3</div>
+        <h4>Deep Fine-tuning</h4>
+        <p>Full model · LR 5e-6<br/>384×384 · FP16<br/>Dual GPU T4</p>
+      </div>
+      <div class="pipe">
+        <div class="pipe-n">4</div>
+        <h4>Inference</h4>
+        <p>TTA + Ensemble<br/>3 threshold modes<br/>Grad-CAM output</p>
+      </div>
+    </div>
+
+    <!-- Dataset -->
+    <div class="sec-label" style="margin-top:16px">Dữ liệu</div>
+    <div class="sec-title">NIH Chest X-ray 14</div>
+    <div class="sec-sub">Bộ dữ liệu chuẩn quốc tế từ National Institutes of Health, Mỹ.</div>
+    <div class="info-table">
+      <table>
+        <thead><tr><th>Thông số</th><th>Chi tiết</th></tr></thead>
+        <tbody>
+          <tr><td>Quy mô</td><td class="hl">112,120 ảnh X-quang từ 30,805 bệnh nhân</td></tr>
+          <tr><td>Định dạng</td><td>PNG, Grayscale → RGB 3 kênh khi đưa vào mô hình</td></tr>
+          <tr><td>Kích thước gốc</td><td>1,024 × 1,024 pixels</td></tr>
+          <tr><td>Số nhãn</td><td>14 bệnh lý + 1 nhãn "No Finding" (Bình thường)</td></tr>
+          <tr><td>Loại nhãn</td><td><b>Multi-label</b> — một ảnh có thể chứa nhiều bệnh đồng thời</td></tr>
+          <tr><td>Phân phối</td><td>Mất cân bằng nghiêm trọng (No Finding: 60,361 vs Hernia: 227)</td></tr>
+          <tr><td>Chia tập</td><td>Train 80% / Val 10% / Test 10% — theo Patient ID</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ KẾT QUẢ ══ -->
+<div id="tab-ket-qua" class="tab-content">
+  <div class="section">
+
+    <!-- 3 chế độ -->
+    <div class="sec-label">Tổng quan</div>
+    <div class="sec-title">Kết quả 3 chế độ chẩn đoán</div>
+    <div class="sec-sub">Đánh giá trên tập Test độc lập (10% dữ liệu, tách theo Patient ID).</div>
+
+    <div class="mode-grid">
+      <div class="mode-card">
+        <div class="mname">Dạng 1 — Precise</div>
+        <div class="mrow"><span style="color:var(--muted)">Mean AUC</span><span class="mval">0.8264</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean F1</span><span class="mval">0.2475</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Recall</span><span class="mval">0.7727</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Specificity</span><span class="mval">0.7318</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px">Youden Index · Cân bằng tổng quát</div>
+      </div>
+      <div class="mode-card" style="border-color:rgba(99,102,241,0.35)">
+        <div class="mname" style="color:var(--indig)">Dạng 2 — Advanced ⭐</div>
+        <div class="mrow"><span style="color:var(--muted)">Mean AUC</span><span class="mval" style="color:var(--indig)">0.8267</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean F1</span><span class="mval" style="color:var(--indig)">0.3306</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Recall</span><span class="mval">0.5210</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Specificity</span><span class="mval" style="color:var(--indig)">0.8597</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px">F1 Optimize · Tốt nhất tổng thể</div>
+      </div>
+      <div class="mode-card">
+        <div class="mname">Dạng 3 — Screening</div>
+        <div class="mrow"><span style="color:var(--muted)">Mean AUC</span><span class="mval">0.8260</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean F1</span><span class="mval">0.1679</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Recall</span><span class="mval" style="color:var(--green)">0.9210</span></div>
+        <div class="mrow"><span style="color:var(--muted)">Mean Specificity</span><span class="mval">0.3287</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px">Recall ≥ 0.75 · Sàng lọc diện rộng</div>
+      </div>
+    </div>
+
+    <hr class="divider" style="margin: 0 0 48px"/>
+
+    <!-- So sánh quốc tế -->
+    <div class="sec-label">So sánh</div>
+    <div class="sec-title">AUC từng bệnh vs. Nghiên cứu quốc tế</div>
+    <div class="sec-sub">
+      Wang et al. (2017) — Baseline gốc NIH &nbsp;|&nbsp;
+      CheXNet Stanford (2017) — Mô hình SOTA của Andrew Ng
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Bệnh lý</th><th>Tiếng Việt</th>
+            <th>Wang et al.</th><th>CheXNet</th>
+            <th>Dự án này</th><th>vs. Wang</th><th>vs. CheXNet</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Atelectasis</td><td>Xẹp phổi</td><td>0.7003</td><td>0.8094</td><td class="my">0.807</td><td><span class="up">+0.107 ✅</span></td><td><span class="dn">−0.002 ≈</span></td></tr>
+          <tr><td>2</td><td>Cardiomegaly</td><td>Tim to</td><td>0.8100</td><td>0.9248</td><td class="my">0.899</td><td><span class="up">+0.089 ✅</span></td><td><span class="dn">−0.026</span></td></tr>
+          <tr><td>3</td><td>Effusion</td><td>Tràn dịch màng phổi</td><td>0.7593</td><td>0.8638</td><td class="my">0.875</td><td><span class="up">+0.116 ✅</span></td><td><span class="up">+0.011 🏆</span></td></tr>
+          <tr><td>4</td><td>Infiltration</td><td>Thâm nhiễm phổi</td><td>0.6614</td><td>0.7345</td><td class="my">0.714</td><td><span class="up">+0.053 ✅</span></td><td><span class="dn">−0.021</span></td></tr>
+          <tr><td>5</td><td>Mass</td><td>Khối u</td><td>0.6933</td><td>0.8676</td><td class="my">0.818</td><td><span class="up">+0.125 ✅</span></td><td><span class="dn">−0.050</span></td></tr>
+          <tr><td>6</td><td>Nodule</td><td>Nốt phổi</td><td>0.6687</td><td>0.7802</td><td class="my">0.752</td><td><span class="up">+0.083 ✅</span></td><td><span class="dn">−0.028</span></td></tr>
+          <tr><td>7</td><td>Pneumonia</td><td>Viêm phổi</td><td>0.6580</td><td>0.7680</td><td class="my">0.749</td><td><span class="up">+0.091 ✅</span></td><td><span class="dn">−0.019</span></td></tr>
+          <tr><td>8</td><td>Pneumothorax</td><td>Tràn khí màng phổi</td><td>0.7993</td><td>0.8887</td><td class="my">0.870</td><td><span class="up">+0.071 ✅</span></td><td><span class="dn">−0.019</span></td></tr>
+          <tr><td>9</td><td>Consolidation</td><td>Đông đặc phổi</td><td>0.7032</td><td>0.8027</td><td class="my">0.805</td><td><span class="up">+0.102 ✅</span></td><td><span class="up">+0.002 🏆</span></td></tr>
+          <tr><td>10</td><td>Edema</td><td>Phù phổi</td><td>0.8052</td><td>0.8878</td><td class="my">0.898</td><td><span class="up">+0.093 ✅</span></td><td><span class="up">+0.010 🏆</span></td></tr>
+          <tr><td>11</td><td>Emphysema</td><td>Khí phế thũng</td><td>0.8330</td><td>0.9371</td><td class="my">0.917</td><td><span class="up">+0.084 ✅</span></td><td><span class="dn">−0.020</span></td></tr>
+          <tr><td>12</td><td>Fibrosis</td><td>Xơ phổi</td><td>0.7859</td><td>0.8047</td><td class="my">0.809</td><td><span class="up">+0.023 ✅</span></td><td><span class="up">+0.004 🏆</span></td></tr>
+          <tr><td>13</td><td>Pleural_Thickening</td><td>Dày màng phổi</td><td>0.6835</td><td>0.8062</td><td class="my">0.777</td><td><span class="up">+0.094 ✅</span></td><td><span class="dn">−0.029</span></td></tr>
+          <tr><td>14</td><td>Hernia</td><td>Thoát vị hoành</td><td>0.8717</td><td>0.9164</td><td class="my">0.946</td><td><span class="up">+0.074 ✅</span></td><td><span class="up">+0.030 🏆</span></td></tr>
+          <tr class="mean">
+            <td>—</td><td colspan="2"><b>MEAN AUC</b></td>
+            <td>0.7381</td><td>0.8412</td>
+            <td class="my">0.8267</td>
+            <td><span class="up">+0.089 ✅</span></td>
+            <td><span class="dn">−0.015</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="summary">
+      <div class="sc"><div class="sl">Vượt Wang et al.</div><div class="sv" style="color:var(--green)">14 / 14 ✅</div></div>
+      <div class="sc"><div class="sl">Vượt CheXNet</div><div class="sv" style="color:var(--indig)">5 / 14 🏆</div></div>
+      <div class="sc"><div class="sl">Khoảng cách CheXNet</div><div class="sv" style="color:var(--amber)">−0.015 AUC</div></div>
+      <div class="sc"><div class="sl">Tài nguyên</div><div class="sv">GPU T4 Kaggle</div></div>
+    </div>
+
+    <!-- chi tiết từng bệnh -->
+    <div class="sec-label" style="margin-top:48px">Chi tiết</div>
+    <div class="sec-title">AUC · F1 · Recall từng bệnh</div>
+    <div class="sec-sub">Dạng 2 — Advanced (AUC tốt nhất, Mean AUC 0.8267)</div>
+
+    <div class="det-table">
+      <table>
+        <thead>
+          <tr><th>Bệnh lý</th><th>Tiếng Việt</th><th>AUC ↑</th><th>F1 ↑</th><th>Recall ↑</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Atelectasis</td><td>Xẹp phổi</td><td class="my">0.802</td><td>0.396</td><td>0.529</td></tr>
+          <tr><td>Cardiomegaly</td><td>Tim to</td><td class="my">0.897</td><td>0.329</td><td>0.410</td></tr>
+          <tr><td>Effusion</td><td>Tràn dịch màng phổi</td><td class="my">0.875</td><td>0.503</td><td><span class="up">0.785 🏆</span></td></tr>
+          <tr><td>Infiltration</td><td>Thâm nhiễm phổi</td><td class="my">0.714</td><td>0.422</td><td>0.519</td></tr>
+          <tr><td>Mass</td><td>Khối u</td><td class="my">0.818</td><td>0.344</td><td>0.439</td></tr>
+          <tr><td>Nodule</td><td>Nốt phổi</td><td class="my">0.751</td><td>0.299</td><td>0.257</td></tr>
+          <tr><td>Pneumonia</td><td>Viêm phổi</td><td class="my">0.747</td><td>0.044</td><td><span class="up">0.785 🏆</span></td></tr>
+          <tr><td>Pneumothorax</td><td>Tràn khí màng phổi</td><td class="my">0.870</td><td>0.304</td><td><span class="up">0.769 🏆</span></td></tr>
+          <tr><td>Consolidation</td><td>Đông đặc phổi</td><td class="my">0.804</td><td>0.247</td><td>0.382</td></tr>
+          <tr><td>Edema</td><td>Phù phổi</td><td class="my">0.884</td><td>0.256</td><td>0.431</td></tr>
+          <tr><td>Emphysema</td><td>Khí phế thũng</td><td class="my">0.917</td><td>0.396</td><td>0.584</td></tr>
+          <tr><td>Fibrosis</td><td>Xơ phổi</td><td class="my">0.809</td><td>0.142</td><td>0.354</td></tr>
+          <tr><td>Pleural_Thickening</td><td>Dày màng phổi</td><td class="my">0.776</td><td>0.190</td><td>0.351</td></tr>
+          <tr><td>Hernia</td><td>Thoát vị hoành</td><td class="my" style="color:var(--amber)">0.945 ⭐</td><td>0.339</td><td>0.312</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <b>Lưu An Thuận</b> &nbsp;·&nbsp; GVHD: <b>Trần Văn Thiện</b> &nbsp;·&nbsp;
+  Đồ án tốt nghiệp · Khoa CNTT · 2025
+</footer>
+
+<script>
+  function switchTab(id, el) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    el.classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
